@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UIE信息抽取</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary-color: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .schema-tag {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .schema-tag:hover {
+            transform: translateY(-1px);
+        }
+        .result-container {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .copy-button {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .copy-button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen pt-20">
+    <nav class="bg-white shadow-lg fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-white/90">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <a href="/" class="flex items-center group">
+                    <img src="/static/relation.svg" class="h-8 w-8 text-indigo-600 transform transition-transform group-hover:scale-110" alt="UIE Icon">
+                    <span class="ml-2 text-lg font-semibold text-gray-800 hover:text-indigo-600 transition-colors">UIE信息抽取</span>
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="https://github.com/wangxiuwen" target="_blank" class="nav-button p-2 text-gray-600 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-lg transition-colors">
+                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </nav>
+    <div class="container mx-auto px-6 py-12">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-3">UIE信息抽取</h1>
+        <p class="text-center text-gray-600 mb-12">基于UIE模型的通用信息抽取工具</p>
+        
+        <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-xl p-8 transform transition-all duration-300 hover:shadow-2xl">
+            <!-- Schema List Input -->
+            <div class="mb-8">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="schemaInput">
+                    抽取模式
+                </label>
+                <div class="flex items-center">
+                    <input type="text" id="schemaInput" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500" placeholder="输入抽取模式（如：人名、时间、地点）">
+                    <button id="addSchema" class="ml-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium text-sm py-1.5 px-3 rounded-lg transition-colors">
+                        添加
+                    </button>
+                </div>
+                <div id="schemaList" class="mt-4 flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- Text Content Input -->
+            <div class="mb-8">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="textContent">
+                    文本内容
+                </label>
+                <textarea id="textContent" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500" rows="6" placeholder="请输入需要抽取信息的文本内容"></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button id="extractButton" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-medium text-sm py-2 px-4 rounded-lg transition-colors mb-8">
+                开始抽取
+            </button>
+
+            <div id="loading" class="hidden">
+                <div class="flex justify-center items-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                    <span class="ml-2 text-gray-600">正在抽取...</span>
+                </div>
+            </div>
+
+            <div id="result" class="hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">抽取结果</h2>
+                <div class="relative bg-gray-50 rounded-xl p-6 shadow-inner">
+                    <button id="copyButton" class="copy-button absolute top-3 right-3 p-2.5 text-gray-500 hover:text-indigo-600 focus:outline-none bg-white rounded-lg shadow-sm hover:shadow-md" title="复制文本">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                    <div id="resultContent" class="text-gray-700 whitespace-pre-wrap font-mono text-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const schemaInput = document.getElementById('schemaInput');
+        const addSchemaButton = document.getElementById('addSchema');
+        const schemaList = document.getElementById('schemaList');
+        const textContent = document.getElementById('textContent');
+        const extractButton = document.getElementById('extractButton');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const resultContent = document.getElementById('resultContent');
+        const copyButton = document.getElementById('copyButton');
+
+        let schemas = [
+            "保险公司名称",
+            "保单类型",
+            "保单号",
+            "保险起期",
+            "保险止期",
+            "保险期间",
+            "总保费",
+            "车船税",
+            "机构名称",
+            "投保确认时间",
+            "被保人姓名",
+            "被保人电话",
+            "车型名称",
+            "车架号",
+            "车牌号",
+            "发动机号",
+            "车辆使用性质",
+            "初登日期",
+            "基本保额",
+            "险种名称",
+            "保费"
+        ];
+
+        // 在页面加载时自动渲染默认schema
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSchemas();
+        });
+
+        // 添加Schema标签
+        function addSchemaTag(schema) {
+            if (!schema) return;
+            
+            // 移除重复检查，因为默认值需要全部显示
+            const tag = document.createElement('div');
+            tag.className = 'schema-tag bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full flex items-center';
+            tag.setAttribute('data-schema', schema);
+            tag.innerHTML = `
+                <span>${schema}</span>
+                <button class="ml-2 text-indigo-600 hover:text-indigo-800 focus:outline-none" onclick="removeSchema('${schema}')">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            `;
+            schemaList.appendChild(tag);
+            schemaInput.value = '';
+        }
+
+        // 添加新的schema时才需要检查重复
+        addSchemaButton.addEventListener('click', () => {
+            const newSchema = schemaInput.value.trim();
+            if (newSchema && !schemas.includes(newSchema)) {
+                schemas.push(newSchema);
+                addSchemaTag(newSchema);
+            }
+        });
+
+        schemaInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const newSchema = schemaInput.value.trim();
+                if (newSchema && !schemas.includes(newSchema)) {
+                    schemas.push(newSchema);
+                    addSchemaTag(newSchema);
+                }
+            }
+        });
+
+        // 移除Schema标签
+        function removeSchema(schema) {
+            schemas = schemas.filter(s => s !== schema);
+            const tag = schemaList.querySelector(`[data-schema="${schema}"]`);
+            if (tag) {
+                tag.remove();
+            }
+        }
+
+        // 重新渲染Schema列表
+        function renderSchemas() {
+            schemaList.innerHTML = '';
+            schemas.forEach(schema => addSchemaTag(schema));
+        }
+
+        // 事件监听
+        addSchemaButton.addEventListener('click', () => {
+            addSchemaTag(schemaInput.value.trim());
+        });
+
+        schemaInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addSchemaTag(schemaInput.value.trim());
+            }
+        });
+
+        // 复制结果
+        copyButton.addEventListener('click', () => {
+            navigator.clipboard.writeText(resultContent.textContent).then(() => {
+                const originalTitle = copyButton.title;
+                copyButton.title = '已复制！';
+                setTimeout(() => {
+                    copyButton.title = originalTitle;
+                }, 2000);
+            });
+        });
+
+        // 提交抽取请求
+        extractButton.addEventListener('click', async () => {
+            // 如果用户没有添加任何schema，使用默认schema
+            const finalSchemas = schemas.length > 0 ? schemas : [
+                "保险公司名称",
+                "保单类型",
+                "保单号",
+                "保险起期",
+                "保险止期",
+                "保险期间",
+                "总保费",
+                "车船税",
+                "机构名称",
+                "投保确认时间",
+                "被保人姓名",
+                "被保人电话",
+                "车型名称",
+                "车架号",
+                "车牌号",
+                "发动机号",
+                "车辆使用性质",
+                "初登日期",
+                "基本保额",
+                "险种名称",
+                "保费"
+            ];
+
+            if (!textContent.value.trim()) {
+                alert('请输入需要抽取信息的文本内容');
+                return;
+            }
+
+            loading.classList.remove('hidden');
+            result.classList.add('hidden');
+            extractButton.disabled = true;
+            extractButton.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                const response = await fetch('/extract', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: textContent.value.trim(),
+                        schema_list: finalSchemas
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('抽取请求失败');
+                }
+
+                const data = await response.json();
+                resultContent.textContent = JSON.stringify(data, null, 2);
+                result.classList.remove('hidden');
+            } catch (error) {
+                alert('抽取失败：' + error.message);
+            } finally {
+                loading.classList.add('hidden');
+                extractButton.disabled = false;
+                extractButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    </script>
+</body>
+</html>
